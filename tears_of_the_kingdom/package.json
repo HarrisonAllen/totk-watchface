@@ -1,0 +1,137 @@
+{
+  "name": "tears_of_the_kingdom",
+  "author": "Harrison Allen",
+  "version": "1.0.0",
+  "keywords": ["pebble-app"],
+  "private": true,
+  "dependencies": {
+    "pebble-clay": "^1.0.4"
+  },
+  "pebble": {
+    "displayName": "Tears of the Kingdom",
+    "uuid": "c234bf39-a905-48a4-9972-2931aadf4d9e",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "capabilities": [
+      "configurable"
+    ],
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "messageKeys": [
+      "dummy"
+    ],
+    "resources": {
+      "media": [
+        {
+          "name": "FONT_BOTW_48", 
+          "characterRegex": "[0-9:A-Za-z ]", 
+          "file": "fonts/botw.ttf", 
+          "type": "font", 
+          "compatibility": "2.7"
+        }, 
+        {
+          "name": "FONT_BOTW_24", 
+          "characterRegex": "[0-9:A-Za-z ]", 
+          "file": "fonts/botw.ttf", 
+          "type": "font", 
+          "compatibility": "2.7"
+        }, 
+        {
+          "name": "FONT_BOTW_28", 
+          "characterRegex": "[0-9:A-Za-z ]", 
+          "file": "fonts/botw.ttf", 
+          "type": "font", 
+          "compatibility": "2.7"
+      },
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_BT_CONN", 
+          "file": "images/BluetoothConnected.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_BT_DISC", 
+          "file": "images/BluetoothDisconnected.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_WEATHER_SUNNY", 
+          "file": "images/WeatherSunny.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_WEATHER_PARTLYCLOUDY", 
+          "file": "images/WeatherPartlyCloudy.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_WEATHER_CLOUDY", 
+          "file": "images/WeatherCloudy.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_WEATHER_RAINY", 
+          "file": "images/WeatherRainy.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_WEATHER_SNOWY", 
+          "file": "images/WeatherSnowy.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_WEATHER_STORMY", 
+          "file": "images/WeatherStormy.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_OUROBOROS", 
+          "file": "images/Ouroboros.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_SUNDAY", 
+          "file": "images/Sunday.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_MONDAY", 
+          "file": "images/Monday.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_TUESDAY", 
+          "file": "images/Tuesday.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_WEDNESDAY", 
+          "file": "images/Wednesday.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_THURSDAY", 
+          "file": "images/Thursday.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_FRIDAY", 
+          "file": "images/Friday.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_SATURDAY", 
+          "file": "images/Saturday.png"
+      }
+      
+      ]
+    }
+  }
+}
