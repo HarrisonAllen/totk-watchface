@@ -1,4 +1,10 @@
 #include <pebble.h>
+// TODO:
+// * Wire weather back up to javascript
+// * Set up javascript again
+// * Set up clay
+// * Wire all the settings back together
+// * Create ouroboros
 
 #define UI_COLOR 0x55ff55
 #define NUM_NOTCHES 5
