@@ -574,7 +574,7 @@ static void main_window_load(Window *window) {
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
 
   // day
-  s_day_layer = text_layer_create(GRect(80 + X_OFFSET, 51 + Y_OFFSET, 40, 22));
+  s_day_layer = text_layer_create(GRect(80 + X_OFFSET, 50 + Y_OFFSET, 40, 22));
   s_day_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BOTW_22));
   text_layer_set_background_color(s_day_layer, GColorClear);
   text_layer_set_text_color(s_day_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
@@ -605,7 +605,7 @@ static void main_window_load(Window *window) {
   layer_set_update_proc(s_temperature_layer, temperature_update_proc);
 
   // day icon
-  s_day_icon_layer = bitmap_layer_create(GRect(64 + X_OFFSET, 55 + Y_OFFSET, 14, 20));
+  s_day_icon_layer = bitmap_layer_create(GRect(64 + X_OFFSET, 53 + Y_OFFSET, 14, 20));
   s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[rand() % NUM_DAY_ICONS]);
   bitmap_layer_set_bitmap(s_day_icon_layer, s_day_icon_bitmap);
   bitmap_layer_set_compositing_mode(s_day_icon_layer, GCompOpSet);
