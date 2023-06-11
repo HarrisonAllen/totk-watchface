@@ -12,14 +12,14 @@
     "uuid": "c234bf39-a905-48a4-9972-2931aadf4d9e",
     "sdkVersion": "3",
     "enableMultiJS": true,
-    "capabilities": [
-      "configurable"
-    ],
     "targetPlatforms": [
       "aplite",
       "basalt",
       "chalk",
       "diorite"
+    ],
+    "capabilities": [
+      "configurable"
     ],
     "watchapp": {
       "watchface": true
@@ -37,7 +37,7 @@
           "compatibility": "2.7"
         }, 
         {
-          "name": "FONT_BOTW_24", 
+          "name": "FONT_BOTW_22", 
           "characterRegex": "[0-9:A-Za-z ]", 
           "file": "fonts/botw.ttf", 
           "type": "font", 
