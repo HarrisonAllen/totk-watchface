@@ -25,7 +25,15 @@
       "watchface": true
     },
     "messageKeys": [
-      "dummy"
+      "TEMPERATURE",
+      "CONDITIONS",
+      "OpenWeatherAPIKey",
+      "WeatherCheckRate",
+      "UseCurrentLocation",
+      "Latitude",
+      "Longitude",
+      "AmericanDate",
+      "VibrateOnDisc"
     ],
     "resources": {
       "media": [
