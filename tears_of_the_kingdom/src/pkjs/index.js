@@ -124,10 +124,10 @@ Pebble.addEventListener('appmessage',
 			lat = dict['Latitude'];
 		if ('Longitude' in dict) // longitude if not using current location
 			lon = dict['Longitude'];
+        APIKey = myAPIKey;
         if ('OpenWeatherAPIKey' in dict)
-            APIKey = dict['OpenWeatherAPIKey']
-        else
-            APIKey = myAPIKey;
+            if (dict['OpenWeatherAPIKey'])
+                APIKey = dict['OpenWeatherAPIKey']
 
 		getWeather();
 	}
