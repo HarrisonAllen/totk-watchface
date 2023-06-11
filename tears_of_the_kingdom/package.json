@@ -38,6 +38,12 @@
     "resources": {
       "media": [
         {
+          "menuIcon": true,
+          "type": "png",
+          "name": "IMAGE_MENU_ICON",
+          "file": "MenuIcon.png"
+        },
+        {
           "name": "FONT_BOTW_48", 
           "characterRegex": "[0-9:A-Za-z ]", 
           "file": "fonts/botw.ttf", 
