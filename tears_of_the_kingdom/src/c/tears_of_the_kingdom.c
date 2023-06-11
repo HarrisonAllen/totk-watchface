@@ -18,12 +18,13 @@
 
 static Window *s_main_window;
 
-static TextLayer *s_hour_layer, *s_minute_layer, *s_colon_layer, *s_date_layer;
+static TextLayer *s_hour_layer, *s_minute_layer, *s_colon_layer,
+  *s_date_layer, *s_day_layer;
 static BitmapLayer *s_bt_icon_layer, *s_weather_icon_layer,
   *s_ouroboros_layer, *s_day_icon_layer;
 static Layer *s_battery_layer, *s_temperature_layer;
 
-static GFont s_time_font, s_date_font;
+static GFont s_time_font, s_date_font, s_day_font;
 static GBitmap *s_bt_icon_conn_bitmap, *s_bt_icon_disc_bitmap, 
   *s_weather_icon_bitmap, *s_ouroboros_bitmap, *s_day_icon_bitmap;
 
@@ -52,6 +53,7 @@ typedef struct ClaySettings {
   int Temperature2;                // Comfortable temperature
   int Temperature3;                // Hot temperature
   int Temperature4;                // Hottest temperature
+  char OpenWeatherAPIKey[MAX_CHARS]; // API key for open weather
   int TEMPERATURE;                 // Current temperature
   Weather CONDITIONS;              // Current weather conditions
   bool AmericanDate;               // use American date format (Jan 01)?
@@ -84,12 +86,13 @@ static const uint32_t WEATHER_ICONS[] = {
 #define DEMO_BATTERY 70
 #define DEMO_CHARGING false
 #define DEMO_TEMPERATURE 60
-#define DEMO_CONDITIONS 1
+#define DEMO_CONDITIONS SNOWY
 #define DEMO_BLUETOOTH true
-#define DEMO_DAY 4
-#define DEMO_HOUR "22"
-#define DEMO_MINUTE "22"
-#define DEMO_DATE "Jun 03"
+#define DEMO_DAY_ICON 4
+#define DEMO_HOUR "00"
+#define DEMO_MINUTE "00"
+#define DEMO_DATE "May 30"
+#define DEMO_DAY "Wed"
 
 // For using the cycles below
 #define DEMO_CYCLE false
@@ -186,7 +189,7 @@ static int s_demo_temperature[] = {
   75
 };
 
-static int s_demo_days[] = {
+static int s_demo_day_icons[] = {
   0,
   1,
   2,
@@ -194,6 +197,16 @@ static int s_demo_days[] = {
   4,
   5,
   6
+};
+
+static char s_demo_days[][8] = {
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat"
 };
 #endif
 
@@ -450,11 +463,12 @@ static void main_window_load(Window *window) {
   s_ouroboros_layer = bitmap_layer_create(GRect(0 + X_OFFSET, 0 + Y_OFFSET, 180, 180));
   s_ouroboros_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_OUROBOROS);
   bitmap_layer_set_bitmap(s_ouroboros_layer, s_ouroboros_bitmap);
+  bitmap_layer_set_compositing_mode(s_ouroboros_layer, GCompOpSet);
   
   // time
   s_time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BOTW_48));
   
-  s_hour_layer = text_layer_create(GRect(1, 66 + Y_OFFSET, bounds.size.w / 2 - 7, 48));
+  s_hour_layer = text_layer_create(GRect(3, 66 + Y_OFFSET, bounds.size.w / 2 - 7, 48));
   text_layer_set_background_color(s_hour_layer, GColorClear);
   text_layer_set_text_color(s_hour_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
   text_layer_set_font(s_hour_layer, s_time_font);
@@ -466,19 +480,27 @@ static void main_window_load(Window *window) {
   text_layer_set_font(s_colon_layer, s_time_font);
   text_layer_set_text_alignment(s_colon_layer, GTextAlignmentCenter);
 
-  s_minute_layer = text_layer_create(GRect(bounds.size.w / 2 + 8, 66 + Y_OFFSET, bounds.size.w / 2 - 4, 48));
+  s_minute_layer = text_layer_create(GRect(bounds.size.w / 2 + 7, 66 + Y_OFFSET, bounds.size.w / 2, 48));
   text_layer_set_background_color(s_minute_layer, GColorClear);
   text_layer_set_text_color(s_minute_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
   text_layer_set_font(s_minute_layer, s_time_font);
   text_layer_set_text_alignment(s_minute_layer, GTextAlignmentLeft);
 
   // date
-  s_date_layer = text_layer_create(GRect(0, 114 + Y_OFFSET, bounds.size.w, 28));
+  s_date_layer = text_layer_create(GRect(0, 112 + Y_OFFSET, bounds.size.w, 28));
   s_date_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BOTW_28));
   text_layer_set_background_color(s_date_layer, GColorClear);
   text_layer_set_text_color(s_date_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
   text_layer_set_font(s_date_layer, s_date_font);
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
+
+  // day
+  s_day_layer = text_layer_create(GRect(80 + X_OFFSET, 51 + Y_OFFSET, 40, 22));
+  s_day_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BOTW_22));
+  text_layer_set_background_color(s_day_layer, GColorClear);
+  text_layer_set_text_color(s_day_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
+  text_layer_set_font(s_day_layer, s_day_font);
+  text_layer_set_text_alignment(s_day_layer, GTextAlignmentCenter);
 
   // bluetooth icon
   s_bt_icon_layer = bitmap_layer_create(GRect(36 + X_OFFSET, 51 + Y_OFFSET, 25, 24));
@@ -486,6 +508,7 @@ static void main_window_load(Window *window) {
   s_bt_icon_disc_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BT_DISC);
   // update bluetooth icon
   bluetooth_callback(connection_service_peek_pebble_app_connection());
+  bitmap_layer_set_compositing_mode(s_bt_icon_layer, GCompOpSet);
 
   // battery stamina wheel
   s_battery_layer = layer_create(GRect(121 + X_OFFSET, 52 + Y_OFFSET, 22, 22));
@@ -496,21 +519,24 @@ static void main_window_load(Window *window) {
   s_weather_icon_layer = bitmap_layer_create(GRect(94 + X_OFFSET, 28 + Y_OFFSET, 24, 24));
   s_weather_icon_bitmap = gbitmap_create_with_resource(WEATHER_ICONS[rand() % NUM_WEATHER_ICONS]);
   bitmap_layer_set_bitmap(s_weather_icon_layer, s_weather_icon_bitmap);
+  bitmap_layer_set_compositing_mode(s_weather_icon_layer, GCompOpSet);
 
   // temperature
   s_temperature_layer = layer_create(GRect(63 + X_OFFSET, 31 + Y_OFFSET, 22, 22));
   layer_set_update_proc(s_temperature_layer, temperature_update_proc);
 
   // day icon
-  s_day_icon_layer = bitmap_layer_create(GRect(83 + X_OFFSET, 55 + Y_OFFSET, 14, 20));
+  s_day_icon_layer = bitmap_layer_create(GRect(64 + X_OFFSET, 55 + Y_OFFSET, 14, 20));
   s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[rand() % NUM_DAY_ICONS]);
   bitmap_layer_set_bitmap(s_day_icon_layer, s_day_icon_bitmap);
+  bitmap_layer_set_compositing_mode(s_day_icon_layer, GCompOpSet);
 
   layer_add_child(window_layer, bitmap_layer_get_layer(s_ouroboros_layer));
   layer_add_child(window_layer, text_layer_get_layer(s_hour_layer));
   layer_add_child(window_layer, text_layer_get_layer(s_colon_layer));
   layer_add_child(window_layer, text_layer_get_layer(s_minute_layer));
   layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
+  layer_add_child(window_layer, text_layer_get_layer(s_day_layer));
   layer_add_child(window_layer, s_battery_layer);
   layer_add_child(window_layer, s_temperature_layer);
   layer_add_child(window_layer, bitmap_layer_get_layer(s_weather_icon_layer));
@@ -537,12 +563,16 @@ static void main_window_unload(Window *window) {
     text_layer_destroy(s_minute_layer);
   if (s_date_layer != NULL)
     text_layer_destroy(s_date_layer);
+  if (s_day_layer != NULL)
+    text_layer_destroy(s_day_layer);
 
   // unload custom fonts
   if (s_time_font != NULL)
     fonts_unload_custom_font(s_time_font);
   if (s_date_font != NULL)
     fonts_unload_custom_font(s_date_font);
+  if (s_day_font != NULL)
+    fonts_unload_custom_font(s_day_font);
 
   // unload bitmap layers
   if (s_ouroboros_layer != NULL)
@@ -598,16 +628,18 @@ static void update_date(struct tm *tick_time){
 #ifdef DEMO_MODE
   if (DEMO_CYCLE) {
     text_layer_set_text(s_date_layer, s_demo_dates[DEMO_CYCLE_POS]);
+    text_layer_set_text(s_day_layer, s_demo_days[DEMO_CYCLE_POS]);
     
     gbitmap_destroy(s_day_icon_bitmap);
-    s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[s_demo_days[DEMO_CYCLE_POS]]);
+    s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[s_demo_day_icons[DEMO_CYCLE_POS]]);
     bitmap_layer_set_bitmap(s_day_icon_layer, s_day_icon_bitmap);
     
   } else {
     text_layer_set_text(s_date_layer, DEMO_DATE);
+    text_layer_set_text(s_day_layer, DEMO_DAY);
     
     gbitmap_destroy(s_day_icon_bitmap);
-    s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[DEMO_DAY]);
+    s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[DEMO_DAY_ICON]);
     bitmap_layer_set_bitmap(s_day_icon_layer, s_day_icon_bitmap);
   }
 #else
@@ -619,6 +651,9 @@ static void update_date(struct tm *tick_time){
   }
 
   text_layer_set_text(s_date_layer, s_date_buffer);
+
+  strftime(s_date_buffer, sizeof(s_date_buffer), "%a", tick_time);
+  text_layer_set_text(s_day_layer, s_date_buffer);
 
   gbitmap_destroy(s_day_icon_bitmap);
   s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[tick_time->tm_wday]);
