@@ -1,17 +1,14 @@
 #include <pebble.h>
-// TODO:
-// * Wire weather back up to javascript
-// * Set up javascript again
-// * Set up clay
-// * Wire all the settings back together
-// * Create ouroboros
+
+// Uncomment for demo mode
+// #define DEMO_MODE
 
 #define UI_COLOR 0x55ff55
 #define NUM_NOTCHES 5
 #define NUM_WEATHER_ICONS 6 
 #define NUM_DAY_ICONS 7
-#define MAX_CHARS 22
-#define DEMO_MODE
+#define MAX_CHARS 40
+#define SETTINGS_KEY 1
 
 #define Y_OFFSET (PBL_DISPLAY_HEIGHT - 180) / 2
 #define X_OFFSET (PBL_DISPLAY_WIDTH - 180) / 2
@@ -43,21 +40,15 @@ typedef enum weather {
 
 // Define settings struct
 typedef struct ClaySettings {
-  bool UseCurrentLocation;         // use GPS for weather?
-  int WeatherCheckRate;            // how often to check weather
-  char Latitude[MAX_CHARS];        // latitude when not using GPS
-  char Longitude[MAX_CHARS];       // longitude when not using GPS
-  bool TemperatureMetric;          // Celsius or Fahrenheit?
-  int Temperature0;                // Coldest temperature
-  int Temperature1;                // Cold temperature
-  int Temperature2;                // Comfortable temperature
-  int Temperature3;                // Hot temperature
-  int Temperature4;                // Hottest temperature
+  int TEMPERATURE;                   // Current temperature
+  Weather CONDITIONS;                // Current weather conditions
+  bool UseCurrentLocation;           // use GPS for weather?
+  int WeatherCheckRate;              // how often to check weather
+  char Latitude[MAX_CHARS];          // latitude when not using GPS
+  char Longitude[MAX_CHARS];         // longitude when not using GPS
   char OpenWeatherAPIKey[MAX_CHARS]; // API key for open weather
-  int TEMPERATURE;                 // Current temperature
-  Weather CONDITIONS;              // Current weather conditions
-  bool AmericanDate;               // use American date format (Jan 01)?
-  bool VibrateOnDisc;              // vibrate on bluetooth disconnect?
+  bool AmericanDate;                 // use American date format (Jan 01)?
+  bool VibrateOnDisc;                // vibrate on bluetooth disconnect?
 } ClaySettings;
 
 static ClaySettings settings;
@@ -118,17 +109,6 @@ static char s_demo_minutes[][8] = {
   "15",
   "11"
 };
-
-static char s_demo_times[][8] = {
-  "05:33",
-  "8:22",
-  "14:01",
-  "20:00",
-  "11:59",
-  "03:15",
-  "1:11"
-};
-
 static char s_demo_dates[][8] = {
   "Mar 22",
   "Jul 05",
@@ -235,6 +215,7 @@ static void battery_callback(BatteryChargeState state) {
   layer_mark_dirty(s_battery_layer); // tells system to re-render at next opportunity
 }
 
+#if defined(PBL_BW)
 static void dither(Layer *layer, GContext *ctx) {
   // Dither it up
   GBitmap *fb = graphics_capture_frame_buffer(ctx);
@@ -254,6 +235,7 @@ static void dither(Layer *layer, GContext *ctx) {
   }
   graphics_release_frame_buffer(ctx, fb);
 }
+#endif
 
 // display battery as stamina bar
 static void battery_update_proc(Layer *layer, GContext *ctx) {
@@ -298,46 +280,6 @@ static void battery_update_proc(Layer *layer, GContext *ctx) {
 #endif
 }
 
-// default clay settings
-static void default_settings() {  
-  settings.UseCurrentLocation = true;             // use GPS for weather
-  settings.WeatherCheckRate = 30;                 // check every 30 mins
-  strcpy(settings.Latitude, "42.36");             // MIT latitude
-  strcpy(settings.Latitude, "-71.1");             // MIT longitude
-  settings.TemperatureMetric = false;             // use fahrenheit
-  settings.Temperature0 = 30;                     // I know I need to bundle up
-  settings.Temperature1 = 50;                     // A big coat is sufficient
-  settings.Temperature2 = 70;                     // Ah, so nice
-  settings.Temperature3 = 85;                     // time to pull out shorts
-  settings.Temperature4 = 100;                    // oh god give me some AC please
-  settings.TEMPERATURE = rand()%120;              // mystery temperature
-  settings.CONDITIONS = rand()%NUM_WEATHER_ICONS; // mystery weather
-  settings.AmericanDate = true;                   // Jan 01 by default
-  settings.VibrateOnDisc = true;                  // vibrate by default
-}
-
-// update display after reading from clay/weather
-static void update_display(){
-  // redraw the temperature
-  layer_mark_dirty(s_temperature_layer);
-
-  // update the date format
-  s_date_set = false;
-
-  // update the weather icon
-  gbitmap_destroy(s_weather_icon_bitmap);
-#ifdef DEMO_MODE
-  s_weather_icon_bitmap = gbitmap_create_with_resource(WEATHER_ICONS[DEMO_CYCLE ? s_demo_weather[DEMO_CYCLE_POS] : DEMO_CONDITIONS]);
-#else
-  s_weather_icon_bitmap = gbitmap_create_with_resource(WEATHER_ICONS[settings.CONDITIONS]);
-#endif
-  bitmap_layer_set_bitmap(s_weather_icon_layer, s_weather_icon_bitmap);
-}
-
-static void request_weather() {
-
-}
-
 // bluetooth status change
 static void bluetooth_callback(bool connected) {
   // change sheikah sensor to represent bluetooth connection
@@ -354,20 +296,158 @@ static void bluetooth_callback(bool connected) {
   }
 }
 
+// default clay settings
+static void default_settings() {  
+  settings.UseCurrentLocation = true;     // use GPS for weather
+  settings.WeatherCheckRate = 30;         // check every 30 mins
+  strcpy(settings.Latitude, "42.36");     // MIT latitude
+  strcpy(settings.Latitude, "-71.1");     // MIT longitude
+  strcpy(settings.OpenWeatherAPIKey, ""); // Blank Key
+  settings.TEMPERATURE = TEMP_NOTCHES[2]; // average temperature
+  settings.CONDITIONS = PARTLYCLOUDY;     // average weather
+  settings.AmericanDate = true;           // Jan 01 by default
+  settings.VibrateOnDisc = true;          // vibrate by default
+}
+
+// update display after reading from clay/weather
+static void update_display(){
+  // redraw the temperature
+  layer_mark_dirty(s_temperature_layer);
+
+  // update the date format
+  time_t temp = time(NULL);
+  struct tm *tick_time = localtime(&temp);
+  update_date(tick_time);
+
+  // update the weather icon
+  gbitmap_destroy(s_weather_icon_bitmap);
+#ifdef DEMO_MODE
+  s_weather_icon_bitmap = gbitmap_create_with_resource(WEATHER_ICONS[DEMO_CYCLE ? s_demo_weather[DEMO_CYCLE_POS] : DEMO_CONDITIONS]);
+#else
+  s_weather_icon_bitmap = gbitmap_create_with_resource(WEATHER_ICONS[settings.CONDITIONS]);
+#endif
+  bitmap_layer_set_bitmap(s_weather_icon_layer, s_weather_icon_bitmap);
+}
+
+// Read settings from persistent storage
+static void load_settings() {
+  // Load the default settings
+  default_settings();
+  // Read settings from persistent storage, if they exist
+  persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
+}
+
+// Save the settings to persistent storage
+static void save_settings() {
+  persist_write_data(SETTINGS_KEY, &settings, sizeof(settings));
+  // Update the display based on new settings
+  update_display();
+}
+
+static void request_weather() {
+  DictionaryIterator *iter;
+  AppMessageResult result = app_message_outbox_begin(&iter);
+
+  if (result == APP_MSG_OK) {
+    // tell the app whether to use current location, celsius, and also the lat and lon
+    dict_write_uint8(iter, MESSAGE_KEY_UseCurrentLocation, settings.UseCurrentLocation);
+    dict_write_cstring(iter, MESSAGE_KEY_Latitude, settings.Latitude);
+    dict_write_cstring(iter, MESSAGE_KEY_Longitude, settings.Longitude);
+    dict_write_cstring(iter, MESSAGE_KEY_OpenWeatherAPIKey, settings.OpenWeatherAPIKey);
+
+    // Send the message
+    result = app_message_outbox_send();
+  }
+}
+
+// Received data! Either for weather or settings
+static void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  // Use current location
+  Tuple *use_current_location_t = dict_find(iterator, MESSAGE_KEY_UseCurrentLocation);
+  if(use_current_location_t) {
+    settings.UseCurrentLocation = use_current_location_t->value->int32 == 1;
+  }
+
+  // Weather update rate
+  Tuple *weather_check_rate_t = dict_find(iterator, MESSAGE_KEY_WeatherCheckRate);
+  if(weather_check_rate_t) {
+    settings.WeatherCheckRate = weather_check_rate_t->value->int32;
+  }
+
+  // Open Weather API Key
+  Tuple *open_weather_api_key_t = dict_find(iterator, MESSAGE_KEY_OpenWeatherAPIKey);
+  if(open_weather_api_key_t) {
+    strcpy(settings.OpenWeatherAPIKey,open_weather_api_key_t->value->cstring);
+  }
+
+  // Manual Latitude
+  Tuple *latitude_t = dict_find(iterator, MESSAGE_KEY_Latitude);
+  if(latitude_t) {
+    strcpy(settings.Latitude,latitude_t->value->cstring);
+  }
+
+  // Manual Longitude
+  Tuple *longitude_t = dict_find(iterator, MESSAGE_KEY_Longitude);
+  if(longitude_t) {
+    strcpy(settings.Longitude,longitude_t->value->cstring);
+  }
+
+  // Current temperature and weather conditions
+  Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
+  Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
+
+  // if weather data is available, use it
+  if (temp_tuple && conditions_tuple) {
+    settings.TEMPERATURE = (int)temp_tuple->value->int32;
+    settings.CONDITIONS = (Weather)conditions_tuple->value->int32;
+    s_weather_loaded = true;
+  } else { // we weren't given weather, so either settings were updated or we were poked. Request it now
+    request_weather();
+  }
+
+  // American date format?
+  Tuple *american_date_t = dict_find(iterator, MESSAGE_KEY_AmericanDate);
+  if(american_date_t) {
+    settings.AmericanDate = american_date_t->value->int32 == 1;
+  }
+
+  Tuple *vibrate_on_disc_t = dict_find(iterator, MESSAGE_KEY_VibrateOnDisc);
+  if(vibrate_on_disc_t) {
+    settings.VibrateOnDisc = vibrate_on_disc_t->value->int32 == 1;
+  }
+
+  save_settings(); // save the new settings! Current weather included
+}
+
+// Message failed to receive
+static void inbox_dropped_callback(AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+}
+
+// Message failed to send
+static void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+}
+
+// Message sent successfully
+static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+}
+
 // Get the temperature gauge angle
-static int get_temp_angle(){
-  if (settings.TEMPERATURE <= TEMP_NOTCHES[0]){ // colder than cold, hit max left
+static int get_temp_angle(int temperature){
+  if (temperature <= TEMP_NOTCHES[0]){ // colder than cold, hit max left
     return TEMP_ANGLE_NOTCHES[0];
   }
-  if (settings.TEMPERATURE >= TEMP_NOTCHES[NUM_NOTCHES-1]){ // hotter than hot, hit max right
+  if (temperature >= TEMP_NOTCHES[NUM_NOTCHES-1]){ // hotter than hot, hit max right
     return TEMP_ANGLE_NOTCHES[NUM_NOTCHES-1];
   }
 
   static uint8_t i;
   for (i = 1; i < NUM_NOTCHES; i++){
-    if (settings.TEMPERATURE < TEMP_NOTCHES[i]){
+    if (temperature < TEMP_NOTCHES[i]){
       // converts temperature to angles
-      return (lerp(TEMP_ANGLE_NOTCHES[i-1],TEMP_ANGLE_NOTCHES[i],unlerp(TEMP_NOTCHES[i-1],TEMP_NOTCHES[i],settings.TEMPERATURE)));
+      return (lerp(TEMP_ANGLE_NOTCHES[i-1],TEMP_ANGLE_NOTCHES[i],unlerp(TEMP_NOTCHES[i-1],TEMP_NOTCHES[i],temperature)));
     }
   }
   return 0;
@@ -375,24 +455,23 @@ static int get_temp_angle(){
 
 // update the temperature gauge
 static void temperature_update_proc(Layer *layer, GContext *ctx) {
-  // update the temperature notches
-  TEMP_NOTCHES[0] = settings.Temperature0;
-  TEMP_NOTCHES[1] = settings.Temperature1;
-  TEMP_NOTCHES[2] = settings.Temperature2;
-  TEMP_NOTCHES[3] = settings.Temperature3;
-  TEMP_NOTCHES[4] = settings.Temperature4;
-
   GRect bounds = layer_get_bounds(layer);
   GPoint center = grect_center_point(&bounds);
+
+#ifdef DEMO_MODE
+  int temperature = DEMO_CYCLE ? s_demo_temperature[DEMO_CYCLE_POS] : DEMO_TEMPERATURE;
+#else
+  int temperature = settings.TEMPERATURE;
+#endif
 
   // clear out the meter
   graphics_context_set_fill_color(ctx, GColorFromHEX(0x000000));
   graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 10, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
 #if defined(PBL_COLOR)
-  if (settings.TEMPERATURE <= TEMP_NOTCHES[0]) { // turn the whole meter ice cold
+  if (temperature <= TEMP_NOTCHES[0]) { // turn the whole meter ice cold
     graphics_context_set_fill_color(ctx, GColorFromHEX(0xAAFFFF));
     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
-  } else if (settings.TEMPERATURE >= TEMP_NOTCHES[NUM_NOTCHES-1]) { // turn the whole meter fiery hot
+  } else if (temperature >= TEMP_NOTCHES[NUM_NOTCHES-1]) { // turn the whole meter fiery hot
     graphics_context_set_fill_color(ctx, GColorFromHEX(0xFF5500));
     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
   } else {
@@ -408,15 +487,15 @@ static void temperature_update_proc(Layer *layer, GContext *ctx) {
     graphics_context_set_fill_color(ctx, GColorFromHEX(0xFFAA00));
     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(60), DEG_TO_TRIGANGLE(130));
 
-    if (settings.TEMPERATURE <= TEMP_NOTCHES[1]){ // add cold trim to the meter
+    if (temperature <= TEMP_NOTCHES[1]){ // add cold trim to the meter
       graphics_context_set_fill_color(ctx, GColorFromHEX(0x00FFFF));
-      if (settings.TEMPERATURE <= (TEMP_NOTCHES[1] + TEMP_NOTCHES[0]) / 2) // larger if colder
+      if (temperature <= (TEMP_NOTCHES[1] + TEMP_NOTCHES[0]) / 2) // larger if colder
         graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 2, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
       else
         graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 1, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
-    } else if (settings.TEMPERATURE >= TEMP_NOTCHES[NUM_NOTCHES-2]){ // add hot trim to the meter
+    } else if (temperature >= TEMP_NOTCHES[NUM_NOTCHES-2]){ // add hot trim to the meter
       graphics_context_set_fill_color(ctx, GColorFromHEX(0xFFAA00));
-      if (settings.TEMPERATURE >= (TEMP_NOTCHES[NUM_NOTCHES-2] + TEMP_NOTCHES[NUM_NOTCHES-1])/2) // larger if hotter
+      if (temperature >= (TEMP_NOTCHES[NUM_NOTCHES-2] + TEMP_NOTCHES[NUM_NOTCHES-1])/2) // larger if hotter
         graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 2, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
       else
         graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 1, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
@@ -438,7 +517,7 @@ static void temperature_update_proc(Layer *layer, GContext *ctx) {
 
   // draw the needle
   GRect small_bounds = grect_crop(bounds, 3);
-  int temp_angle = get_temp_angle();
+  int temp_angle = get_temp_angle(temperature);
 #if defined(PBL_BW)
   graphics_context_set_stroke_color(ctx, GColorBlack);
   graphics_context_set_stroke_width(ctx, 4);
@@ -600,27 +679,24 @@ static void main_window_unload(Window *window) {
 // update the time display
 static void update_time() {
 #ifdef DEMO_MODE
-  if (DEMO_CYCLE) {
-    text_layer_set_text(s_hour_layer, s_demo_hours[DEMO_CYCLE_POS]);
-    text_layer_set_text(s_colon_layer, ":");
-    text_layer_set_text(s_minute_layer, s_demo_minutes[DEMO_CYCLE_POS]);
-  } else {
-    text_layer_set_text(s_hour_layer, DEMO_HOUR);
-    text_layer_set_text(s_colon_layer, ":");
-    text_layer_set_text(s_minute_layer, DEMO_MINUTE);
-  }
+  text_layer_set_text(s_hour_layer, DEMO_CYCLE ? s_demo_hours[DEMO_CYCLE_POS] : DEMO_HOUR);
+  text_layer_set_text(s_colon_layer, ":");
+  text_layer_set_text(s_minute_layer, DEMO_CYCLE ? s_demo_minutes[DEMO_CYCLE_POS] : DEMO_MINUTE);
 #else
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
 
   // put hours and minutes into buffer
-  static char s_buffer[8];
-  strftime(s_buffer, sizeof(s_buffer), clock_is_24h_style() ?
-                                        "%H:%M" : "%I:%M", tick_time);
-  text_layer_set_text(s_hour_layer, s_buffer); 
+  static char s_hour_buffer[8];
+  strftime(s_hour_buffer, sizeof(s_hour_buffer), clock_is_24h_style() ?
+                                        "%H" : "%I", tick_time);
+  text_layer_set_text(s_hour_layer, s_hour_buffer); 
+  
+  text_layer_set_text(s_colon_layer, ":");
 
-  strftime(s_buffer, sizeof(s_buffer), "%M", tick_time);
-  text_layer_set_text(s_minute_layer, s_buffer);  
+  static char s_minute_buffer[8];
+  strftime(s_minute_buffer, sizeof(s_minute_buffer), "%M", tick_time);
+  text_layer_set_text(s_minute_layer, s_minute_buffer);  
 #endif
 }
 
@@ -652,8 +728,9 @@ static void update_date(struct tm *tick_time){
 
   text_layer_set_text(s_date_layer, s_date_buffer);
 
-  strftime(s_date_buffer, sizeof(s_date_buffer), "%a", tick_time);
-  text_layer_set_text(s_day_layer, s_date_buffer);
+  static char s_day_buffer[8];
+  strftime(s_day_buffer, sizeof(s_day_buffer), "%a", tick_time);
+  text_layer_set_text(s_day_layer, s_day_buffer);
 
   gbitmap_destroy(s_day_icon_bitmap);
   s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[tick_time->tm_wday]);
@@ -684,8 +761,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changes) {
 
 // classic init, you know we need it
 static void init() {
-  // load_settings();
-  default_settings();
+  load_settings();
 
   // setup window
   s_main_window = window_create();
@@ -701,8 +777,11 @@ static void init() {
 
   // set up tick_handler to run every minute
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-  // want to display time at the start
+  // want to display time and date at the start
   update_time();
+  time_t temp = time(NULL);
+  struct tm *tick_time = localtime(&temp);
+  update_date(tick_time);
 
   // callback for battery level updates
   battery_state_service_subscribe(battery_callback);
@@ -715,15 +794,15 @@ static void init() {
   });
 
   // Register callbacks for settings/weather updates
-  // app_message_register_inbox_received(inbox_received_callback);
-  // app_message_register_inbox_dropped(inbox_dropped_callback);
-  // app_message_register_outbox_failed(outbox_failed_callback);
-  // app_message_register_outbox_sent(outbox_sent_callback);
+  app_message_register_inbox_received(inbox_received_callback);
+  app_message_register_inbox_dropped(inbox_dropped_callback);
+  app_message_register_outbox_failed(outbox_failed_callback);
+  app_message_register_outbox_sent(outbox_sent_callback);
 
   // Open AppMessage
-  // const int inbox_size = 256; // maaaaybe overkill, but 128 isn't enough
-  // const int outbox_size = 256;
-  // app_message_open(inbox_size, outbox_size);
+  const int inbox_size = 256; // maaaaybe overkill, but 128 isn't enough
+  const int outbox_size = 256;
+  app_message_open(inbox_size, outbox_size);
 }
 
 // classic deinit, you know we need this too
