@@ -1,7 +1,7 @@
 {
   "name": "tears_of_the_kingdom",
   "author": "Harrison Allen",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {
@@ -33,7 +33,26 @@
       "Latitude",
       "Longitude",
       "AmericanDate",
-      "VibrateOnDisc"
+      "VibrateOnDisc",
+      "ColorBackground",
+      "ColorOuroboros",
+      "ColorWeatherIcon",
+      "ColorDay",
+      "ColorDayIcon",
+      "ColorBatteryBackground",
+      "ColorBatteryOk",
+      "ColorBatteryLow",
+      "ColorBatteryCharging",
+      "ColorTime",
+      "ColorDate",
+      "ColorWeatherHot",
+      "ColorWeatherVeryHot",
+      "ColorWeatherCold",
+      "ColorWeatherVeryCold",
+      "ColorWeatherBackground",
+      "ColorWeatherNeedle",
+      "ColorBluetoothConnected",
+      "ColorBluetoothDisconnected"
     ],
     "resources": {
       "media": [

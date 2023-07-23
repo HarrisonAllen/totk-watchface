@@ -49,6 +49,26 @@ typedef struct ClaySettings {
   char OpenWeatherAPIKey[MAX_CHARS]; // API key for open weather
   bool AmericanDate;                 // use American date format (Jan 01)?
   bool VibrateOnDisc;                // vibrate on bluetooth disconnect?
+  // Colors
+  GColor ColorBackground;
+  GColor ColorOuroboros;
+  GColor ColorWeatherIcon;
+  GColor ColorDay;
+  GColor ColorDayIcon;
+  GColor ColorBatteryBackground;
+  GColor ColorBatteryOk;
+  GColor ColorBatteryLow;
+  GColor ColorBatteryCharging;
+  GColor ColorTime;
+  GColor ColorDate;
+  GColor ColorWeatherHot;
+  GColor ColorWeatherVeryHot;
+  GColor ColorWeatherCold;
+  GColor ColorWeatherVeryCold;
+  GColor ColorWeatherBackground;
+  GColor ColorWeatherNeedle;
+  GColor ColorBluetoothConnected;
+  GColor ColorBluetoothDisconnected;
 } ClaySettings;
 
 static ClaySettings settings;
@@ -248,21 +268,21 @@ static void battery_update_proc(Layer *layer, GContext *ctx) {
 #endif
 
   GRect bounds = layer_get_bounds(layer);
-  GColor curColor = PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(0x00FF00)); // green when battery is healthy
+  GColor curColor = PBL_IF_BW_ELSE(GColorWhite, settings.ColorBatteryOk); // green when battery is healthy
   if (cur_battery <= 10){ // red when running out of "stamina"
-    curColor = PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(0xFF0000));
+    curColor = PBL_IF_BW_ELSE(GColorWhite, settings.ColorBatteryLow);
   }
   if (charging){ // yellow when charging (values are weird when charging tho)
-    curColor = PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(0xFFFF00));
+    curColor = PBL_IF_BW_ELSE(GColorWhite, settings.ColorBatteryCharging);
   }
 
   int length = (cur_battery * TRIG_MAX_ANGLE) / 100; // get percent around circle
 
   // fill grey background
   if (charging) {
-    graphics_context_set_fill_color(ctx, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(0x555555)));
+    graphics_context_set_fill_color(ctx, PBL_IF_BW_ELSE(GColorWhite, settings.ColorBatteryBackground));
   } else {
-    graphics_context_set_fill_color(ctx, PBL_IF_BW_ELSE(GColorBlack, GColorFromHEX(0x555555)));
+    graphics_context_set_fill_color(ctx, PBL_IF_BW_ELSE(GColorBlack, settings.ColorBatteryBackground));
   }
   graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 7, 0, TRIG_MAX_ANGLE);
 #if defined(PBL_BW)
@@ -307,10 +327,65 @@ static void default_settings() {
   settings.CONDITIONS = PARTLYCLOUDY;     // average weather
   settings.AmericanDate = true;           // Jan 01 by default
   settings.VibrateOnDisc = true;          // vibrate by default
+  
+  // Colors
+  settings.ColorBackground = GColorBlack;
+  settings.ColorOuroboros = GColorScreaminGreen;
+  settings.ColorDay = GColorScreaminGreen;
+  settings.ColorDayIcon = GColorScreaminGreen;
+  settings.ColorBatteryBackground = GColorDarkGray;
+  settings.ColorBatteryOk = GColorGreen;
+  settings.ColorBatteryLow = GColorRed;
+  settings.ColorBatteryCharging = GColorYellow;
+  settings.ColorTime = GColorScreaminGreen;
+  settings.ColorDate = GColorScreaminGreen;
+  settings.ColorWeatherIcon = GColorWhite;
+  settings.ColorWeatherHot = GColorChromeYellow;
+  settings.ColorWeatherVeryHot = GColorOrange;
+  settings.ColorWeatherCold = GColorCyan;
+  settings.ColorWeatherVeryCold = GColorCeleste;
+  settings.ColorWeatherBackground = GColorDarkGray;
+  settings.ColorWeatherNeedle = GColorWhite;
+  settings.ColorBluetoothConnected = GColorElectricBlue;
+  settings.ColorBluetoothDisconnected = GColorDarkGray;
+}
+
+static void refresh_colors() {
+#if defined(PBL_COLOR)
+  // Change colors
+  GColor *palette;
+  palette = gbitmap_get_palette(s_ouroboros_bitmap);
+  palette[0] = settings.ColorBackground;
+  palette[1] = settings.ColorOuroboros;
+  
+  palette = gbitmap_get_palette(s_weather_icon_bitmap);
+  palette[0] = settings.ColorBackground;
+  palette[1] = settings.ColorWeatherIcon;
+  
+  palette = gbitmap_get_palette(s_bt_icon_conn_bitmap);
+  palette[0] = settings.ColorBackground;
+  palette[1] = settings.ColorBluetoothConnected;
+  
+  palette = gbitmap_get_palette(s_bt_icon_disc_bitmap);
+  palette[0] = settings.ColorBackground;
+  palette[1] = settings.ColorBluetoothDisconnected;
+  
+  palette = gbitmap_get_palette(s_day_icon_bitmap);
+  palette[0] = settings.ColorBackground;
+  palette[1] = settings.ColorDayIcon;
+
+  text_layer_set_text_color(s_day_layer, settings.ColorDay);
+
+  text_layer_set_text_color(s_hour_layer, settings.ColorTime);
+  text_layer_set_text_color(s_colon_layer, settings.ColorTime);
+  text_layer_set_text_color(s_minute_layer, settings.ColorTime);
+  
+  text_layer_set_text_color(s_date_layer, settings.ColorDate);
+#endif
 }
 
 // update display after reading from clay/weather
-static void update_display(){
+static void update_display() {
   // redraw the temperature
   layer_mark_dirty(s_temperature_layer);
 
@@ -327,6 +402,8 @@ static void update_display(){
   s_weather_icon_bitmap = gbitmap_create_with_resource(WEATHER_ICONS[settings.CONDITIONS]);
 #endif
   bitmap_layer_set_bitmap(s_weather_icon_layer, s_weather_icon_bitmap);
+
+  refresh_colors();
 }
 
 // Read settings from persistent storage
@@ -416,6 +493,103 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     settings.VibrateOnDisc = vibrate_on_disc_t->value->int32 == 1;
   }
 
+  Tuple *color_t;
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorBackground);
+  if(color_t) {
+    settings.ColorBackground = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorOuroboros);
+  if(color_t) {
+    settings.ColorOuroboros = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorWeatherIcon);
+  if(color_t) {
+    settings.ColorWeatherIcon = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorDay);
+  if(color_t) {
+    settings.ColorDay = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorDayIcon);
+  if(color_t) {
+    settings.ColorDayIcon = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorBatteryBackground);
+  if(color_t) {
+    settings.ColorBatteryBackground = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorBatteryOk);
+  if(color_t) {
+    settings.ColorBatteryOk = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorBatteryLow);
+  if(color_t) {
+    settings.ColorBatteryLow = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorBatteryCharging);
+  if(color_t) {
+    settings.ColorBatteryCharging = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorTime);
+  if(color_t) {
+    settings.ColorTime = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorDate);
+  if(color_t) {
+    settings.ColorDate = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorWeatherHot);
+  if(color_t) {
+    settings.ColorWeatherHot = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorWeatherVeryHot);
+  if(color_t) {
+    settings.ColorWeatherVeryHot = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorWeatherCold);
+  if(color_t) {
+    settings.ColorWeatherCold = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorWeatherVeryCold);
+  if(color_t) {
+    settings.ColorWeatherVeryCold = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorWeatherBackground);
+  if(color_t) {
+    settings.ColorWeatherBackground = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorWeatherNeedle);
+  if(color_t) {
+    settings.ColorWeatherNeedle = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorBluetoothConnected);
+  if(color_t) {
+    settings.ColorBluetoothConnected = GColorFromHEX(color_t->value->int32);
+  }
+
+  color_t = dict_find(iterator, MESSAGE_KEY_ColorBluetoothDisconnected);
+  if(color_t) {
+    settings.ColorBluetoothDisconnected = GColorFromHEX(color_t->value->int32);
+  }
+
   save_settings(); // save the new settings! Current weather included
 }
 
@@ -465,36 +639,36 @@ static void temperature_update_proc(Layer *layer, GContext *ctx) {
 #endif
 
   // clear out the meter
-  graphics_context_set_fill_color(ctx, GColorFromHEX(0x000000));
+  graphics_context_set_fill_color(ctx, PBL_IF_BW_ELSE(GColorBlack, settings.ColorBackground));
   graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 10, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
 #if defined(PBL_COLOR)
   if (temperature <= TEMP_NOTCHES[0]) { // turn the whole meter ice cold
-    graphics_context_set_fill_color(ctx, GColorFromHEX(0xAAFFFF));
+    graphics_context_set_fill_color(ctx, settings.ColorWeatherVeryCold);
     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
   } else if (temperature >= TEMP_NOTCHES[NUM_NOTCHES-1]) { // turn the whole meter fiery hot
-    graphics_context_set_fill_color(ctx, GColorFromHEX(0xFF5500));
+    graphics_context_set_fill_color(ctx, settings.ColorWeatherVeryHot);
     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
   } else {
     // meter background
-    graphics_context_set_fill_color(ctx, GColorFromHEX(0x555555));
+    graphics_context_set_fill_color(ctx, settings.ColorWeatherBackground);
     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
 
     // cold section
-    graphics_context_set_fill_color(ctx, GColorFromHEX(0x00FFFF));
+    graphics_context_set_fill_color(ctx, settings.ColorWeatherCold);
     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(-60));
 
     // hot section
-    graphics_context_set_fill_color(ctx, GColorFromHEX(0xFFAA00));
+    graphics_context_set_fill_color(ctx, settings.ColorWeatherHot);
     graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(60), DEG_TO_TRIGANGLE(130));
 
     if (temperature <= TEMP_NOTCHES[1]){ // add cold trim to the meter
-      graphics_context_set_fill_color(ctx, GColorFromHEX(0x00FFFF));
+      graphics_context_set_fill_color(ctx, settings.ColorWeatherCold);
       if (temperature <= (TEMP_NOTCHES[1] + TEMP_NOTCHES[0]) / 2) // larger if colder
         graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 2, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
       else
         graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 1, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
     } else if (temperature >= TEMP_NOTCHES[NUM_NOTCHES-2]){ // add hot trim to the meter
-      graphics_context_set_fill_color(ctx, GColorFromHEX(0xFFAA00));
+      graphics_context_set_fill_color(ctx, settings.ColorWeatherHot);
       if (temperature >= (TEMP_NOTCHES[NUM_NOTCHES-2] + TEMP_NOTCHES[NUM_NOTCHES-1])/2) // larger if hotter
         graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 2, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
       else
@@ -507,7 +681,7 @@ static void temperature_update_proc(Layer *layer, GContext *ctx) {
 #endif
 
   // draw the ticks
-  graphics_context_set_stroke_color(ctx, GColorFromHEX(0x000000));
+  graphics_context_set_stroke_color(ctx, PBL_IF_BW_ELSE(GColorBlack, settings.ColorBackground));
   graphics_context_set_stroke_width(ctx, 1);
   static uint8_t i;
   for (i = 0; i < 9; i++){
@@ -518,17 +692,17 @@ static void temperature_update_proc(Layer *layer, GContext *ctx) {
   // draw the needle
   GRect small_bounds = grect_crop(bounds, 3);
   int temp_angle = get_temp_angle(temperature);
-#if defined(PBL_BW)
-  graphics_context_set_stroke_color(ctx, GColorBlack);
+
+  graphics_context_set_stroke_color(ctx, PBL_IF_BW_ELSE(GColorBlack, settings.ColorBackground));
   graphics_context_set_stroke_width(ctx, 4);
   graphics_draw_line(ctx, center, 
                      gpoint_from_polar(small_bounds, GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(temp_angle)));
-#endif
-  graphics_context_set_stroke_color(ctx, PBL_IF_BW_ELSE(GColorWhite, GColorWhite));
+
+  graphics_context_set_stroke_color(ctx, PBL_IF_BW_ELSE(GColorWhite, settings.ColorWeatherNeedle));
   graphics_context_set_stroke_width(ctx, 2);
   graphics_draw_line(ctx, center, 
                      gpoint_from_polar(small_bounds, GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(temp_angle)));
-  graphics_context_set_fill_color(ctx, PBL_IF_BW_ELSE(GColorWhite, GColorWhite));
+  graphics_context_set_fill_color(ctx, PBL_IF_BW_ELSE(GColorWhite, settings.ColorWeatherNeedle));
   graphics_fill_circle(ctx, center, 2);
 }
 
@@ -549,19 +723,19 @@ static void main_window_load(Window *window) {
   
   s_hour_layer = text_layer_create(GRect(3, 66 + Y_OFFSET, bounds.size.w / 2 - 7, 48));
   text_layer_set_background_color(s_hour_layer, GColorClear);
-  text_layer_set_text_color(s_hour_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
+  text_layer_set_text_color(s_hour_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorTime));
   text_layer_set_font(s_hour_layer, s_time_font);
   text_layer_set_text_alignment(s_hour_layer, GTextAlignmentRight);
 
   s_colon_layer = text_layer_create(GRect(1, 62 + Y_OFFSET, bounds.size.w, 48));
   text_layer_set_background_color(s_colon_layer, GColorClear);
-  text_layer_set_text_color(s_colon_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
+  text_layer_set_text_color(s_colon_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorTime));
   text_layer_set_font(s_colon_layer, s_time_font);
   text_layer_set_text_alignment(s_colon_layer, GTextAlignmentCenter);
 
   s_minute_layer = text_layer_create(GRect(bounds.size.w / 2 + 7, 66 + Y_OFFSET, bounds.size.w / 2, 48));
   text_layer_set_background_color(s_minute_layer, GColorClear);
-  text_layer_set_text_color(s_minute_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
+  text_layer_set_text_color(s_minute_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorTime));
   text_layer_set_font(s_minute_layer, s_time_font);
   text_layer_set_text_alignment(s_minute_layer, GTextAlignmentLeft);
 
@@ -569,7 +743,7 @@ static void main_window_load(Window *window) {
   s_date_layer = text_layer_create(GRect(0, 112 + Y_OFFSET, bounds.size.w, 28));
   s_date_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BOTW_28));
   text_layer_set_background_color(s_date_layer, GColorClear);
-  text_layer_set_text_color(s_date_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
+  text_layer_set_text_color(s_date_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorDate));
   text_layer_set_font(s_date_layer, s_date_font);
   text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
 
@@ -577,7 +751,7 @@ static void main_window_load(Window *window) {
   s_day_layer = text_layer_create(GRect(80 + X_OFFSET, 50 + Y_OFFSET, 40, 22));
   s_day_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BOTW_22));
   text_layer_set_background_color(s_day_layer, GColorClear);
-  text_layer_set_text_color(s_day_layer, PBL_IF_BW_ELSE(GColorWhite, GColorFromHEX(UI_COLOR)));
+  text_layer_set_text_color(s_day_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorDay));
   text_layer_set_font(s_day_layer, s_day_font);
   text_layer_set_text_alignment(s_day_layer, GTextAlignmentCenter);
 
@@ -736,6 +910,8 @@ static void update_date(struct tm *tick_time){
   s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[tick_time->tm_wday]);
   bitmap_layer_set_bitmap(s_day_icon_layer, s_day_icon_bitmap);
 #endif
+
+  refresh_colors();
 }
 
 // this fires every minute
@@ -771,7 +947,7 @@ static void init() {
     .unload = main_window_unload
   });
 
-  window_set_background_color(s_main_window, GColorBlack);
+  window_set_background_color(s_main_window, PBL_IF_BW_ELSE(GColorBlack, settings.ColorBackground));
 
   window_stack_push(s_main_window, true);
 
@@ -800,8 +976,8 @@ static void init() {
   app_message_register_outbox_sent(outbox_sent_callback);
 
   // Open AppMessage
-  const int inbox_size = 256; // maaaaybe overkill, but 128 isn't enough
-  const int outbox_size = 256;
+  const int inbox_size = 1024; // maaaaybe overkill, but 128 isn't enough
+  const int outbox_size = 1024;
   app_message_open(inbox_size, outbox_size);
 }
 
