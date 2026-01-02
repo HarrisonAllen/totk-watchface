@@ -1,7 +1,7 @@
 {
   "name": "tears_of_the_kingdom",
   "author": "Harrison Allen",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "keywords": ["pebble-app"],
   "private": true,
   "dependencies": {
@@ -100,8 +100,18 @@
       }, 
       {
           "type": "bitmap", 
+          "name": "IMAGE_WEATHER_MOONY", 
+          "file": "images/WeatherMoony.png"
+      }, 
+      {
+          "type": "bitmap", 
           "name": "IMAGE_WEATHER_PARTLYCLOUDY", 
           "file": "images/WeatherPartlyCloudy.png"
+      }, 
+      {
+          "type": "bitmap", 
+          "name": "IMAGE_WEATHER_PARTLYMOONY", 
+          "file": "images/WeatherPartlyMoony.png"
       }, 
       {
           "type": "bitmap", 

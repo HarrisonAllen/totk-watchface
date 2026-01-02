@@ -1,8 +1,8 @@
 var myAPIKey = 'THIS IS A SECRET HEHE'; // key for open weather
 var APIKey = myAPIKey; 
 var use_current_location = false; // use GPS
-var lat = '42.36'; // latitude for weather w/o GPS
-var lon = '-71.1'; // longitude for weather w/o GPS
+var lat = localStorage.getItem('lat') || '42.36'; // latitude for weather w/o GPS
+var lon = localStorage.getItem('lon') || '-71.1'; // longitude for weather w/o GPS
 
 // Import the Clay package
 var Clay = require('pebble-clay');
@@ -22,13 +22,24 @@ var xhrRequest = function (url, type, callback) {
 };
 
 function locationSuccess(pos) {
+	if (pos) {
+		lat = pos.coords.latitude;
+		lon = pos.coords.longitude;
+		localStorage.setItem('lat', lat);
+		localStorage.setItem('lon', lon);
+	}
+	else {
+		lat = localStorage.getItem('lat');
+		lon = localStorage.getItem('lon');
+	}
 
 	// Construct URL
 	var url = 'http://api.openweathermap.org/data/2.5/weather?' + 
 		'lat=' + (use_current_location ? pos.coords.latitude : lat) + 
 		'&lon=' + (use_current_location ? pos.coords.longitude : lon) + 
 		'&appid=' + APIKey +
-		'&units=' + 'imperial';
+		'&units=' + 'imperial' + 
+		'&exclude=hourly,daily';
 
 	xhrRequest(url, 'GET',
 		function(responseText) {
@@ -36,15 +47,19 @@ function locationSuccess(pos) {
 			var json = JSON.parse(responseText);
 
 			var temperature = json.main.temp;
+			var cur_time = json.dt;
+			var sunrise = json.sys.sunrise;
+			var sunset = json.sys.sunset;
+			var is_day = cur_time > sunrise && cur_time < sunset;
 
 			var conditions = 0; // sunny
 			var id = json.weather[0].id;
 			if (id > 802) {
 				conditions = 2; // cloudy
 			} else if (id > 800) {
-				conditions = 1; // partly cloudy
+				conditions = is_day ? 1 : 7; // partly cloudy
 			} else if (id == 800) {
-				conditions = 0; // sunny
+				conditions = is_day ? 0 : 6; // sunny
 			} else if (id > 700) {
 				conditions = 2; // cloudy
 			} else if (id > 600 || id == 511) { //snow/freezing rain
@@ -73,6 +88,7 @@ function locationSuccess(pos) {
 
 function locationError(err) {
 	console.log('Error requesting location!');
+	locationSuccess(null);
 }
 
 function getWeather() {
@@ -128,6 +144,10 @@ Pebble.addEventListener('appmessage',
         if ('OpenWeatherAPIKey' in dict)
             if (dict['OpenWeatherAPIKey'])
                 APIKey = dict['OpenWeatherAPIKey']
+		if (lat && lon) {
+			localStorage.setItem('lat', lat);
+			localStorage.setItem('lon', lon);
+		}
 
 		getWeather();
 	}
