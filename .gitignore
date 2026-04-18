@@ -11,3 +11,5 @@
 **/[bB]uild/
 
 **/.lock-waf_linux2_build
+.DS_Store
+tears_of_the_kingdom/node_modules/

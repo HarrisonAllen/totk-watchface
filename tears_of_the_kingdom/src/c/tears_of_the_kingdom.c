@@ -71,6 +71,7 @@ typedef struct ClaySettings {
   GColor ColorWeatherNeedle;
   GColor ColorBluetoothConnected;
   GColor ColorBluetoothDisconnected;
+  bool ColorOverride;
 } ClaySettings;
 
 static ClaySettings settings;
@@ -352,6 +353,7 @@ static void default_settings() {
   settings.ColorWeatherNeedle = GColorWhite;
   settings.ColorBluetoothConnected = GColorElectricBlue;
   settings.ColorBluetoothDisconnected = GColorDarkGray;
+  settings.ColorOverride = false;
 }
 
 static void refresh_colors() {
@@ -360,7 +362,7 @@ static void refresh_colors() {
   GColor *palette;
   palette = gbitmap_get_palette(s_ouroboros_bitmap);
   palette[0] = settings.ColorBackground;
-  palette[1] = settings.ColorOuroboros;
+  palette[1] = settings.ColorOverride ? settings.ColorOuroboros : settings.ColorOuroboros;
   
   palette = gbitmap_get_palette(s_weather_icon_bitmap);
   palette[0] = settings.ColorBackground;
@@ -376,15 +378,15 @@ static void refresh_colors() {
   
   palette = gbitmap_get_palette(s_day_icon_bitmap);
   palette[0] = settings.ColorBackground;
-  palette[1] = settings.ColorDayIcon;
+  palette[1] = settings.ColorOverride ? settings.ColorOuroboros : settings.ColorDayIcon;
 
-  text_layer_set_text_color(s_day_layer, settings.ColorDay);
+  text_layer_set_text_color(s_day_layer, settings.ColorOverride ? settings.ColorOuroboros : settings.ColorDay);
 
-  text_layer_set_text_color(s_hour_layer, settings.ColorTime);
-  text_layer_set_text_color(s_colon_layer, settings.ColorTime);
-  text_layer_set_text_color(s_minute_layer, settings.ColorTime);
+  text_layer_set_text_color(s_hour_layer, settings.ColorOverride ? settings.ColorOuroboros : settings.ColorTime);
+  text_layer_set_text_color(s_colon_layer, settings.ColorOverride ? settings.ColorOuroboros : settings.ColorTime);
+  text_layer_set_text_color(s_minute_layer, settings.ColorOverride ? settings.ColorOuroboros : settings.ColorTime);
   
-  text_layer_set_text_color(s_date_layer, settings.ColorDate);
+  text_layer_set_text_color(s_date_layer, settings.ColorOverride ? settings.ColorOuroboros : settings.ColorDate);
 #endif
 }
 
@@ -592,6 +594,11 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   color_t = dict_find(iterator, MESSAGE_KEY_ColorBluetoothDisconnected);
   if(color_t) {
     settings.ColorBluetoothDisconnected = GColorFromHEX(color_t->value->int32);
+  }
+
+  Tuple *color_override_t = dict_find(iterator, MESSAGE_KEY_ColorOverride);
+  if(color_override_t) {
+    settings.ColorOverride = color_override_t->value->int32 == 1;
   }
 
   save_settings(); // save the new settings! Current weather included

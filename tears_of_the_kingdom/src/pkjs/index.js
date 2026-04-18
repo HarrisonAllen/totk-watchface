@@ -4,10 +4,8 @@ var use_current_location = false; // use GPS
 var lat = localStorage.getItem('lat') || '42.36'; // latitude for weather w/o GPS
 var lon = localStorage.getItem('lon') || '-71.1'; // longitude for weather w/o GPS
 
-// Import the Clay package
-var Clay = require('pebble-clay');
-// Load our Clay configuration file
-var clayConfig = require('./config');
+var Clay = require('@rebble/clay');
+var clayConfig = require('./config.json');
 // Initialize Clay
 var clay = new Clay(clayConfig);
 
