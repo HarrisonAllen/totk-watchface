@@ -13,6 +13,20 @@
 #define Y_OFFSET (PBL_DISPLAY_HEIGHT - 180) / 2
 #define X_OFFSET (PBL_DISPLAY_WIDTH - 180) / 2
 
+#if defined(PBL_PLATFORM_EMERY)
+#define BATT_THICKNESS 15
+#define TEMP_THICKNESS 11
+#define TEMP_TRIM 2
+#define NEEDLE_CROP 5
+#define NEEDLE_THICKNESS 3
+#else
+#define BATT_THICKNESS 7
+#define TEMP_THICKNESS 5
+#define TEMP_TRIM 1
+#define NEEDLE_CROP 2
+#define NEEDLE_THICKNESS 2
+#endif
+
 static Window *s_main_window;
 
 static TextLayer *s_hour_layer, *s_minute_layer, *s_colon_layer,
@@ -86,6 +100,18 @@ static const uint32_t DAY_ICONS[] = {
   RESOURCE_ID_IMAGE_SATURDAY
 };
 
+#if defined(PBL_PLATFORM_EMERY)
+static const uint32_t WEATHER_ICONS[] = {
+  RESOURCE_ID_IMAGE_WEATHER_SUNNY_LARGE,  
+  RESOURCE_ID_IMAGE_WEATHER_PARTLYCLOUDY_LARGE,
+  RESOURCE_ID_IMAGE_WEATHER_CLOUDY_LARGE,
+  RESOURCE_ID_IMAGE_WEATHER_RAINY_LARGE,
+  RESOURCE_ID_IMAGE_WEATHER_SNOWY_LARGE,
+  RESOURCE_ID_IMAGE_WEATHER_STORMY_LARGE,
+  RESOURCE_ID_IMAGE_WEATHER_MOONY_LARGE,
+  RESOURCE_ID_IMAGE_WEATHER_PARTLYMOONY_LARGE
+};
+#else
 static const uint32_t WEATHER_ICONS[] = {
   RESOURCE_ID_IMAGE_WEATHER_SUNNY,  
   RESOURCE_ID_IMAGE_WEATHER_PARTLYCLOUDY,
@@ -96,19 +122,25 @@ static const uint32_t WEATHER_ICONS[] = {
   RESOURCE_ID_IMAGE_WEATHER_MOONY,
   RESOURCE_ID_IMAGE_WEATHER_PARTLYMOONY
 };
+#endif
 
 #ifdef DEMO_MODE
 // For manual demo
 #define DEMO_BATTERY 70
 #define DEMO_CHARGING false
 #define DEMO_TEMPERATURE 60
-#define DEMO_CONDITIONS SNOWY
+#define DEMO_CONDITIONS PARTLYCLOUDY
 #define DEMO_BLUETOOTH true
 #define DEMO_DAY_ICON 4
-#define DEMO_HOUR "00"
-#define DEMO_MINUTE "00"
-#define DEMO_DATE "May 30"
-#define DEMO_DAY "Wed"
+#define DEMO_HOUR "09"
+#define DEMO_MINUTE "28"
+#if defined(PBL_PLATFORM_EMERY)
+#define DEMO_DATE "Thu Jun 04"
+#define DEMO_DAY ""
+#else
+#define DEMO_DATE "Jun 04"
+#define DEMO_DAY "Thu"
+#endif
 
 // For using the cycles below
 #define DEMO_CYCLE false
@@ -289,14 +321,14 @@ static void battery_update_proc(Layer *layer, GContext *ctx) {
   } else {
     graphics_context_set_fill_color(ctx, PBL_IF_BW_ELSE(GColorBlack, settings.ColorBatteryBackground));
   }
-  graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 7, 0, TRIG_MAX_ANGLE);
+  graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, BATT_THICKNESS, 0, TRIG_MAX_ANGLE);
 #if defined(PBL_BW)
   dither(layer, ctx);
 #endif
 
   // then fill up stamina bar counterclockwise
   graphics_context_set_fill_color(ctx, curColor);
-  graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 7, TRIG_MAX_ANGLE-length, TRIG_MAX_ANGLE);
+  graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, BATT_THICKNESS, TRIG_MAX_ANGLE-length, TRIG_MAX_ANGLE);
 
 #if defined(PBL_BW)
   if (!charging && cur_battery <= 10) {
@@ -655,40 +687,40 @@ static void temperature_update_proc(Layer *layer, GContext *ctx) {
 #if defined(PBL_COLOR)
   if (temperature <= TEMP_NOTCHES[0]) { // turn the whole meter ice cold
     graphics_context_set_fill_color(ctx, settings.ColorWeatherVeryCold);
-    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
+    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_THICKNESS, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
   } else if (temperature >= TEMP_NOTCHES[NUM_NOTCHES-1]) { // turn the whole meter fiery hot
     graphics_context_set_fill_color(ctx, settings.ColorWeatherVeryHot);
-    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
+    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_THICKNESS, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
   } else {
     // meter background
     graphics_context_set_fill_color(ctx, settings.ColorWeatherBackground);
-    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
+    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_THICKNESS, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
 
     // cold section
     graphics_context_set_fill_color(ctx, settings.ColorWeatherCold);
-    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(-60));
+    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_THICKNESS, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(-60));
 
     // hot section
     graphics_context_set_fill_color(ctx, settings.ColorWeatherHot);
-    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(60), DEG_TO_TRIGANGLE(130));
+    graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_THICKNESS, DEG_TO_TRIGANGLE(60), DEG_TO_TRIGANGLE(130));
 
     if (temperature <= TEMP_NOTCHES[1]){ // add cold trim to the meter
       graphics_context_set_fill_color(ctx, settings.ColorWeatherCold);
       if (temperature <= (TEMP_NOTCHES[1] + TEMP_NOTCHES[0]) / 2) // larger if colder
-        graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 2, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
+        graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_TRIM * 2, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
       else
-        graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 1, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
+        graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_TRIM, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
     } else if (temperature >= TEMP_NOTCHES[NUM_NOTCHES-2]){ // add hot trim to the meter
       graphics_context_set_fill_color(ctx, settings.ColorWeatherHot);
       if (temperature >= (TEMP_NOTCHES[NUM_NOTCHES-2] + TEMP_NOTCHES[NUM_NOTCHES-1])/2) // larger if hotter
-        graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 2, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
+        graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_TRIM * 2, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
       else
-        graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 1, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
+        graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_TRIM, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
     }
   }
 #else
   graphics_context_set_fill_color(ctx, GColorWhite);
-  graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, 5, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
+  graphics_fill_radial(ctx, bounds, GOvalScaleModeFitCircle, TEMP_THICKNESS, DEG_TO_TRIGANGLE(-130), DEG_TO_TRIGANGLE(130));
 #endif
 
   // draw the ticks
@@ -701,24 +733,116 @@ static void temperature_update_proc(Layer *layer, GContext *ctx) {
   }
 
   // draw the needle
-  GRect small_bounds = grect_crop(bounds, 3);
+  GRect small_bounds = grect_crop(bounds, NEEDLE_CROP);
   int temp_angle = get_temp_angle(temperature);
 
   graphics_context_set_stroke_color(ctx, PBL_IF_BW_ELSE(GColorBlack, settings.ColorBackground));
-  graphics_context_set_stroke_width(ctx, 4);
+  graphics_context_set_stroke_width(ctx, NEEDLE_THICKNESS * 2);
   graphics_draw_line(ctx, center, 
                      gpoint_from_polar(small_bounds, GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(temp_angle)));
 
   graphics_context_set_stroke_color(ctx, PBL_IF_BW_ELSE(GColorWhite, settings.ColorWeatherNeedle));
-  graphics_context_set_stroke_width(ctx, 2);
+  graphics_context_set_stroke_width(ctx, NEEDLE_THICKNESS);
   graphics_draw_line(ctx, center, 
                      gpoint_from_polar(small_bounds, GOvalScaleModeFitCircle, DEG_TO_TRIGANGLE(temp_angle)));
   graphics_context_set_fill_color(ctx, PBL_IF_BW_ELSE(GColorWhite, settings.ColorWeatherNeedle));
-  graphics_fill_circle(ctx, center, 2);
+  graphics_fill_circle(ctx, center, NEEDLE_THICKNESS);
 }
 
-// setup the display
-static void main_window_load(Window *window) {
+#if defined(PBL_PLATFORM_EMERY)
+static void emery_layer_setup(Window *window) {
+  Layer *window_layer = window_get_root_layer(window);
+  GRect bounds = layer_get_bounds(window_layer);
+
+  // Watchface Resources
+  // ouroboros
+  s_ouroboros_layer = bitmap_layer_create(GRect(0, 0, 200, 228));
+  s_ouroboros_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_OUROBOROS);
+  bitmap_layer_set_bitmap(s_ouroboros_layer, s_ouroboros_bitmap);
+  bitmap_layer_set_compositing_mode(s_ouroboros_layer, GCompOpSet);
+  
+  // time
+  s_time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BOTW_56));
+  
+  s_hour_layer = text_layer_create(GRect(1, 62, bounds.size.w / 2 - 8, 62));
+  text_layer_set_background_color(s_hour_layer, GColorClear);
+  text_layer_set_text_color(s_hour_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorTime));
+  text_layer_set_font(s_hour_layer, s_time_font);
+  text_layer_set_text_alignment(s_hour_layer, GTextAlignmentRight);
+
+  s_colon_layer = text_layer_create(GRect(2, 57, bounds.size.w, 64));
+  text_layer_set_background_color(s_colon_layer, GColorClear);
+  text_layer_set_text_color(s_colon_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorTime));
+  text_layer_set_font(s_colon_layer, s_time_font);
+  text_layer_set_text_alignment(s_colon_layer, GTextAlignmentCenter);
+
+  s_minute_layer = text_layer_create(GRect(bounds.size.w / 2 + 8, 62, bounds.size.w / 2, 62));
+  text_layer_set_background_color(s_minute_layer, GColorClear);
+  text_layer_set_text_color(s_minute_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorTime));
+  text_layer_set_font(s_minute_layer, s_time_font);
+  text_layer_set_text_alignment(s_minute_layer, GTextAlignmentLeft);
+
+  // date
+  s_date_layer = text_layer_create(GRect(0, 116, bounds.size.w, 36));
+  s_date_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BOTW_32));
+  text_layer_set_background_color(s_date_layer, GColorClear);
+  text_layer_set_text_color(s_date_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorDate));
+  text_layer_set_font(s_date_layer, s_date_font);
+  text_layer_set_text_alignment(s_date_layer, GTextAlignmentCenter);
+
+  // day
+  s_day_layer = text_layer_create(GRect(80 + X_OFFSET, 50 + Y_OFFSET, 40, 22));
+  s_day_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_BOTW_22));
+  text_layer_set_background_color(s_day_layer, GColorClear);
+  text_layer_set_text_color(s_day_layer, PBL_IF_BW_ELSE(GColorWhite, settings.ColorDay));
+  text_layer_set_font(s_day_layer, s_day_font);
+  text_layer_set_text_alignment(s_day_layer, GTextAlignmentCenter);
+
+  // bluetooth icon
+  s_bt_icon_layer = bitmap_layer_create(GRect(34, 28, 48, 46));
+  s_bt_icon_conn_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BT_CONN_LARGE);
+  s_bt_icon_disc_bitmap = gbitmap_create_with_resource(RESOURCE_ID_IMAGE_BT_DISC_LARGE);
+  // update bluetooth icon
+  bluetooth_callback(connection_service_peek_pebble_app_connection());
+  bitmap_layer_set_compositing_mode(s_bt_icon_layer, GCompOpSet);
+
+  // battery stamina wheel
+  s_battery_layer = layer_create(GRect(120, 28, 46, 46));
+  // assign update procedure to battery layer
+  layer_set_update_proc(s_battery_layer, battery_update_proc);
+
+  // weather icon
+  s_weather_icon_layer = bitmap_layer_create(GRect(117, 150, 48, 48));
+  s_weather_icon_bitmap = gbitmap_create_with_resource(WEATHER_ICONS[rand() % NUM_WEATHER_ICONS]);
+  bitmap_layer_set_bitmap(s_weather_icon_layer, s_weather_icon_bitmap);
+  bitmap_layer_set_compositing_mode(s_weather_icon_layer, GCompOpSet);
+
+  // temperature
+  s_temperature_layer = layer_create(GRect(33, 155, 48, 48));
+  layer_set_update_proc(s_temperature_layer, temperature_update_proc);
+
+  // day icon
+  s_day_icon_layer = bitmap_layer_create(GRect(64 + X_OFFSET, 53 + Y_OFFSET, 14, 20));
+  s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[rand() % NUM_DAY_ICONS]);
+  bitmap_layer_set_bitmap(s_day_icon_layer, s_day_icon_bitmap);
+  bitmap_layer_set_compositing_mode(s_day_icon_layer, GCompOpSet);
+
+  layer_add_child(window_layer, bitmap_layer_get_layer(s_ouroboros_layer));
+  layer_add_child(window_layer, text_layer_get_layer(s_hour_layer));
+  layer_add_child(window_layer, text_layer_get_layer(s_colon_layer));
+  layer_add_child(window_layer, text_layer_get_layer(s_minute_layer));
+  layer_add_child(window_layer, text_layer_get_layer(s_date_layer));
+  // layer_add_child(window_layer, text_layer_get_layer(s_day_layer));
+  layer_add_child(window_layer, s_battery_layer);
+  layer_add_child(window_layer, s_temperature_layer);
+  layer_add_child(window_layer, bitmap_layer_get_layer(s_weather_icon_layer));
+  layer_add_child(window_layer, bitmap_layer_get_layer(s_bt_icon_layer));
+  // layer_add_child(window_layer, bitmap_layer_get_layer(s_day_icon_layer));
+
+  update_display(); // and update the display to fill in everything
+}
+#else
+static void regular_layer_setup(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
@@ -808,6 +932,16 @@ static void main_window_load(Window *window) {
   layer_add_child(window_layer, bitmap_layer_get_layer(s_day_icon_layer));
 
   update_display(); // and update the display to fill in everything
+}
+#endif
+
+// setup the display
+static void main_window_load(Window *window) {
+  #if defined(PBL_PLATFORM_EMERY)
+  emery_layer_setup(window);
+  #else
+  regular_layer_setup(window);
+  #endif
 }
 
 // unload everything!
@@ -904,6 +1038,20 @@ static void update_date(struct tm *tick_time){
     bitmap_layer_set_bitmap(s_day_icon_layer, s_day_icon_bitmap);
   }
 #else
+  #if defined(PBL_PLATFORM_EMERY)
+    static char s_date_buffer[14];
+    if (settings.AmericanDate) {
+      strftime(s_date_buffer, sizeof(s_date_buffer), "%a %b %d", tick_time); // displayed as "Jan 01"
+    } else {
+      strftime(s_date_buffer, sizeof(s_date_buffer), "%a %d %b", tick_time); // displayed as "01 Jan"
+    }
+
+    text_layer_set_text(s_date_layer, s_date_buffer);
+
+    gbitmap_destroy(s_day_icon_bitmap);
+    s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[tick_time->tm_wday]);
+    bitmap_layer_set_bitmap(s_day_icon_layer, s_day_icon_bitmap);
+  #else
   static char s_date_buffer[8];
   if (settings.AmericanDate) {
     strftime(s_date_buffer, sizeof(s_date_buffer), "%b %d", tick_time); // displayed as "Jan 01"
@@ -920,6 +1068,7 @@ static void update_date(struct tm *tick_time){
   gbitmap_destroy(s_day_icon_bitmap);
   s_day_icon_bitmap = gbitmap_create_with_resource(DAY_ICONS[tick_time->tm_wday]);
   bitmap_layer_set_bitmap(s_day_icon_layer, s_day_icon_bitmap);
+  #endif
 #endif
 
   refresh_colors();

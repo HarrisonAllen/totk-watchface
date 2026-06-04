@@ -1,7 +1,7 @@
 {
   "name": "tears_of_the_kingdom",
   "author": "Harrison Allen",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "keywords": [
     "pebble-app"
   ],
@@ -90,6 +90,20 @@
           "compatibility": "2.7"
         },
         {
+          "name": "FONT_BOTW_56",
+          "characterRegex": "[0-9:]",
+          "file": "fonts/botw.ttf",
+          "type": "font",
+          "compatibility": "2.7"
+        },
+        {
+          "name": "FONT_BOTW_32",
+          "characterRegex": "[0-9:A-Za-z ]",
+          "file": "fonts/botw.ttf",
+          "type": "font",
+          "compatibility": "2.7"
+        },
+        {
           "type": "bitmap",
           "name": "IMAGE_BT_CONN",
           "file": "images/BluetoothConnected.png"
@@ -98,6 +112,16 @@
           "type": "bitmap",
           "name": "IMAGE_BT_DISC",
           "file": "images/BluetoothDisconnected.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_BT_CONN_LARGE",
+          "file": "images/BluetoothConnectedLarge.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_BT_DISC_LARGE",
+          "file": "images/BluetoothDisconnectedLarge.png"
         },
         {
           "type": "bitmap",
@@ -138,6 +162,46 @@
           "type": "bitmap",
           "name": "IMAGE_WEATHER_STORMY",
           "file": "images/WeatherStormy.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_WEATHER_SUNNY_LARGE",
+          "file": "images/WeatherSunnyLarge.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_WEATHER_MOONY_LARGE",
+          "file": "images/WeatherMoonyLarge.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_WEATHER_PARTLYCLOUDY_LARGE",
+          "file": "images/WeatherPartlyCloudyLarge.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_WEATHER_PARTLYMOONY_LARGE",
+          "file": "images/WeatherPartlyMoonyLarge.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_WEATHER_CLOUDY_LARGE",
+          "file": "images/WeatherCloudyLarge.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_WEATHER_RAINY_LARGE",
+          "file": "images/WeatherRainyLarge.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_WEATHER_SNOWY_LARGE",
+          "file": "images/WeatherSnowyLarge.png"
+        },
+        {
+          "type": "bitmap",
+          "name": "IMAGE_WEATHER_STORMY_LARGE",
+          "file": "images/WeatherStormyLarge.png"
         },
         {
           "type": "bitmap",
