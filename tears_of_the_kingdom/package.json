@@ -1,7 +1,7 @@
 {
   "name": "tears_of_the_kingdom",
   "author": "Harrison Allen",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "keywords": [
     "pebble-app"
   ],
@@ -95,6 +95,26 @@
           "file": "fonts/botw.ttf",
           "type": "font",
           "compatibility": "2.7"
+        },
+        {
+          "name": "FONT_BOTW_74",
+          "characterRegex": "[0-9:]",
+          "file": "fonts/botw.ttf",
+          "type": "font",
+          "compatibility": "2.7",
+          "targetPlatforms": [
+            "gabbro"
+          ]
+        },
+        {
+          "name": "FONT_BOTW_42",
+          "characterRegex": "[0-9:A-Za-z ]",
+          "file": "fonts/botw.ttf",
+          "type": "font",
+          "compatibility": "2.7",
+          "targetPlatforms": [
+            "gabbro"
+          ]
         },
         {
           "name": "FONT_BOTW_32",
